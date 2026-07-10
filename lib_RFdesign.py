@@ -433,6 +433,11 @@ class ConvexProbehorn(Convex):
         p = 1  : straight cone / pyramid
         p < 1  : outward-bulging silhouette
         p > 1  : concave, pencil-tip / trumpet-like silhouette
+    Alternatively, a signed curvature parameter kappa may be used, mapped as
+    p = exp(kappa), so that the sign directly selects the curvature direction:
+        kappa = 0 : straight cone / pyramid
+        kappa > 0 : concave (pencil-tip / trumpet-like)
+        kappa < 0 : convex (outward-bulging), mirror image of +kappa
     """
 
     @staticmethod
@@ -483,6 +488,7 @@ class ConvexProbehorn(Convex):
         body_length=10.0,
         n_sides=20,
         profile_power=1.0,
+        profile_curvature=None,
         n_slices=40,
         theta_offset=None,
         shifts=(0.0, 0.0, 0.0),
@@ -507,6 +513,13 @@ class ConvexProbehorn(Convex):
             Number of polygon sides approximating the circle (4 -> pyramid).
         profile_power : float
             Power-law exponent p of the taper silhouette (see class docstring).
+            Ignored when profile_curvature is given.
+        profile_curvature : float or None
+            Signed curvature parameter kappa. When given, overrides
+            profile_power via p = exp(kappa):
+              kappa = 0 -> straight, kappa > 0 -> concave (pencil-tip),
+              kappa < 0 -> convex bulge (mirror image of +kappa).
+            Recommended as the optimizer design variable.
         n_slices : int
             Number of loft sections along the taper.
         theta_offset : float or None
@@ -520,6 +533,8 @@ class ConvexProbehorn(Convex):
 
         if n_sides < 3:
             raise ValueError('n_sides must be at least 3.')
+        if profile_curvature is not None:
+            profile_power = float(np.exp(profile_curvature))
         if profile_power <= 0.0:
             raise ValueError('profile_power must be positive.')
         if taper_length <= 0.0:
@@ -604,6 +619,7 @@ class ConvexProbehorn(Convex):
             'total_length': float(total_length),
             'n_sides': int(n_sides),
             'profile_power': float(profile_power),
+            'profile_curvature': None if profile_curvature is None else float(profile_curvature),
             'n_slices': int(n_slices),
             'theta_offset': float(theta_offset),
             'sections': sections_shifted,
